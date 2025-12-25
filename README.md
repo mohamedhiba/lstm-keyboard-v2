@@ -10,47 +10,47 @@ Includes training, evaluation (top-k accuracy / perplexity), export, and a small
 - [DONE] Create repo + venv
 - [DONE] Add folder structure: `src/`, `api/`, `tests/`
 - [DONE] Add `requirements.txt`
-- [ ] First commit + push
+- [DONE] First commit + push
 
 **Done when:** imports work and repo runs basic commands.
 
 ---
 
 ### Milestone 1 — Data pipeline (`src/data.py`)
-- [ ] Download/load dataset (default: WikiText-2)
-- [ ] Build word-level vocabulary + UNK token
-- [ ] Encode/decode functions
-- [ ] Batch builder producing `(x, y)` with shapes `(B, T)`
-- [ ] Sanity prints: vocab size, sample decode, batch shapes
+- [DOEN] Download/load dataset (default: WikiText-2)
+- [DONE] Build word-level vocabulary + UNK token
+- [DONE] Encode/decode functions
+- [DONE] Batch builder producing `(x, y)` with shapes `(B, T)`
+- [DONE] Sanity prints: vocab size, sample decode, batch shapes
 
 **Done when:** `python -m src.data` prints correct shapes and readable decoded samples.
 
 ---
 
 ### Milestone 2 — Model forward pass (`src/model.py`)
-- [ ] Implement `Embedding -> LSTM -> Linear`
-- [ ] Output logits shape `(B, T, V)`
-- [ ] Add `tests/test_shapes.py` with assertions
+- [DONE] Implement `Embedding -> LSTM -> Linear`
+- [DONE] Output logits shape `(B, T, V)`
+- [DONE] Add `tests/test_shapes.py` with assertions
 
 **Done when:** `pytest` passes and forward pass runs.
 
 ---
 
 ### Milestone 3 — Training loop (`src/train.py`)
-- [ ] Cross-entropy loss over `(B*T, V)`
-- [ ] Optimizer (Adam), gradient clipping, checkpoint saving
-- [ ] Logging loss every N steps
-- [ ] Overfit-1-batch test (prove loss drops a lot)
+- [DONE] Cross-entropy loss over `(B*T, V)`
+- [DONE] Optimizer (Adam), gradient clipping, checkpoint saving
+- [DONE] Logging loss every N steps
+- [DONE] Overfit-1-batch test (prove loss drops a lot)
 
 **Done when:** you can train an epoch and produce a checkpoint; overfit test succeeds.
 
 ---
 
 ### Milestone 4 — Evaluation + inference (`src/eval.py`, `src/infer.py`)
-- [ ] Evaluate top-1 accuracy
-- [ ] Evaluate top-5 accuracy
-- [ ] Perplexity (recommended)
-- [ ] `predict_next(prefix, k)` returns top-k suggestions
+- [DONE] Evaluate top-1 accuracy
+- [DONE] Evaluate top-5 accuracy
+- [DONE] Perplexity (recommended)
+- [DONE] `predict_next(prefix, k)` returns top-k suggestions
 
 **Done when:** evaluation prints metrics and inference returns sensible suggestions.
 
@@ -127,6 +127,7 @@ curl -X POST "http://127.0.0.1:8000/predict" \
 * Dropout: 0.2
 * Optimizer: Adam, lr = 1e-3
 * Grad clip: 1.0
+* epochs: 10
 
 ---
 
