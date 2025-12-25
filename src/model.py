@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 import torch
 import torch.nn as nn
 
+LSTMState = tuple[torch.Tensor, torch.Tensor]
 class LSTMLanguageModel(nn.Module):
     """Word-level LSTM language model.
     
@@ -95,3 +96,25 @@ class LSTMLanguageModel(nn.Module):
         if return_state:
             return logits, new_state
         return logits
+    
+    def forward_with_state(self, x: torch.Tensor, state: Optional[LSTMState] = None) -> tuple[torch.Tensor, LSTMState]:
+        """Forward pass that also returns the new (h, c) LSTM state."""
+        embedded = self.embedding(x)  # (B, T, E)
+        if state is None:
+            lstm_out, new_state = self.lstm(embedded)
+        else:
+            lstm_out, new_state = self.lstm(embedded, state)
+        logits = self.fc(lstm_out)  # (B, T, V)
+        return logits, new_state
+
+    def step(self, token_ids: torch.Tensor, state: Optional[LSTMState] = None) -> tuple[torch.Tensor, LSTMState]:
+        """One-step decode using cached LSTM state.
+
+        token_ids: (B,) or (B, 1) long token ids
+        returns logits: (B, 1, V)
+        """
+        if token_ids.dim() == 1:
+            token_ids = token_ids.unsqueeze(1)
+        if token_ids.dtype != torch.long:
+            token_ids = token_ids.long()
+        return self.forward_with_state(token_ids, state)
