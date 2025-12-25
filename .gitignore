@@ -8,3 +8,4 @@ checkpoints/
 artifacts/
 .pytest_cache/
 data/
+exports/
