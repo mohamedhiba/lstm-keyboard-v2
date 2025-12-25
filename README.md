@@ -1,29 +1,58 @@
-
 # LSTM Keyboard v2 (Next-Word Prediction)
 
-A from-scratch (self-written) LSTM language model that predicts the next word given a text prefix.  
-Includes training, evaluation (top-k accuracy / perplexity), export, and a small FastAPI demo.
+A from-scratch (self-written) **word-level** LSTM language model that predicts the next word given a text prefix.
 
-## Milestone Checklist
+What you can do right now:
+- Train an LSTM LM on WikiText-2 text files
+- Evaluate **loss / perplexity / top-1 / top-5**
+- Run a CLI next-word predictor (`infer.py`) + multi-token generation
+
+> Note: this is intentionally built without copy-pasting other implementations.
+
+---
+
+## Project structure
+
+```
+.
+├── src/
+│   ├── data.py      # vocab + encoding + contiguous LM batching
+│   ├── model.py     # Embedding -> LSTM -> Linear
+│   ├── train.py     # training loop + checkpointing
+│   ├── eval.py      # eval loss/ppl/topk
+│   └── infer.py     # top-k next word + generation
+├── tests/
+│   └── test_shapes.py
+├── data/
+│   └── raw/         # train.txt valid.txt test.txt (not committed)
+├── checkpoints/     # best.pt (not committed)
+└── requirements.txt
+```
+
+---
+
+## Milestone checklist
 
 ### Milestone 0 — Repo setup
 - [DONE] Create repo + venv
-- [DONE] Add folder structure: `src/`, `api/`, `tests/`
+- [DONE] Add folder structure: `src/`, `tests/`
 - [DONE] Add `requirements.txt`
 - [DONE] First commit + push
-
-**Done when:** imports work and repo runs basic commands.
 
 ---
 
 ### Milestone 1 — Data pipeline (`src/data.py`)
-- [DOEN] Download/load dataset (default: WikiText-2)
-- [DONE] Build word-level vocabulary + UNK token
-- [DONE] Encode/decode functions
+- [DONE] Load dataset text (train/valid/test)
+- [DONE] Tokenize (word-level)
+- [DONE] Build vocab from **train only**
+- [DONE] Encode/decode
 - [DONE] Batch builder producing `(x, y)` with shapes `(B, T)`
-- [DONE] Sanity prints: vocab size, sample decode, batch shapes
+- [DONE] Sanity prints: vocab size, sample decode, batch shapes, shift check
 
-**Done when:** `python -m src.data` prints correct shapes and readable decoded samples.
+Run:
+```bash
+python -m src.data
+```
 
 ---
 
@@ -32,7 +61,10 @@ Includes training, evaluation (top-k accuracy / perplexity), export, and a small
 - [DONE] Output logits shape `(B, T, V)`
 - [DONE] Add `tests/test_shapes.py` with assertions
 
-**Done when:** `pytest` passes and forward pass runs.
+Run:
+```bash
+pytest -q
+```
 
 ---
 
@@ -42,103 +74,101 @@ Includes training, evaluation (top-k accuracy / perplexity), export, and a small
 - [DONE] Logging loss every N steps
 - [DONE] Overfit-1-batch test (prove loss drops a lot)
 
-**Done when:** you can train an epoch and produce a checkpoint; overfit test succeeds.
+Overfit-one-batch sanity:
+```bash
+python src/train.py --overfit-one-batch --steps 300 --lr 1e-2
+```
+
+Full training:
+```bash
+python src/train.py --epochs 10 --lr 1e-3 --log-every 100
+```
 
 ---
 
 ### Milestone 4 — Evaluation + inference (`src/eval.py`, `src/infer.py`)
-- [DONE] Evaluate top-1 accuracy
-- [DONE] Evaluate top-5 accuracy
-- [DONE] Perplexity (recommended)
-- [DONE] `predict_next(prefix, k)` returns top-k suggestions
+- [DONE] Eval loss / perplexity
+- [DONE] Eval top-1 and top-5
+- [DONE] CLI next-word suggestions (top-k)
+- [DONE] CLI generation with sampling + quality controls
 
-**Done when:** evaluation prints metrics and inference returns sensible suggestions.
+Eval:
+```bash
+python src/eval.py --ckpt checkpoints/best.pt --split valid
+python src/eval.py --ckpt checkpoints/best.pt --split test
+```
+
+Next-word (top-k):
+```bash
+python src/infer.py --ckpt checkpoints/best.pt --text "I want to" --k 10
+```
+
+Generation (recommended settings):
+```bash
+python src/infer.py --ckpt checkpoints/best.pt --text "The people that" \
+  --generate 60 --strategy sample --temperature 0.9 --topk 50 --seed 7 \
+  --ban-unk --ban-tokens '\",@-@' --repeat-penalty 1.2 --repeat-window 80 --stop-eos
+```
 
 ---
 
-### Milestone 5 — Export + API demo (`src/export.py`, `api/main.py`)
-- [ ] Export model (TorchScript preferred)
-- [ ] FastAPI endpoints:
-  - [ ] `GET /health`
-  - [ ] `POST /predict` with `{ "text": "...", "k": 5 }`
-- [ ] README: clean run instructions + example outputs
-
-**Done when:** API runs via `uvicorn` and `curl` returns suggestions.
+### Milestone 5 — Export + API demo (`src/export.py`, `api/`)
+- [ ] Export model (TorchScript or `torch.save` bundle)
+- [ ] FastAPI endpoint: `POST /predict` with `{ "text": "...", "k": 5 }`
 
 ---
 
-## Quickstart
+## Setup
 
-### 1) Setup
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-````
-
-### 2) Data sanity check
-
-```bash
-python -m src.data
-```
-
-### 3) Train
-
-```bash
-python -m src.train --epochs 1 --batch-size 64 --seq-len 30
-```
-
-### 4) Evaluate
-
-```bash
-python -m src.eval --ckpt checkpoints/model.pt
-```
-
-### 5) Inference (CLI)
-
-```bash
-python -m src.infer --text "i want to" --k 5 --ckpt checkpoints/model.pt
-```
-
-### 6) Run API
-
-```bash
-uvicorn api.main:app --reload
-```
-
-Test it:
-
-```bash
-curl -X POST "http://127.0.0.1:8000/predict" \
-  -H "Content-Type: application/json" \
-  -d '{"text":"i want to","k":5}'
 ```
 
 ---
 
-## Configuration Defaults (recommended)
+## Dataset
 
-* Dataset: WikiText-2
-* Vocab: word-level (+ `<UNK>`)
-* `seq_len=30`, `batch_size=64`
-* Embedding dim: 256
-* LSTM hidden: 512
-* LSTM layers: 2
-* Dropout: 0.2
-* Optimizer: Adam, lr = 1e-3
-* Grad clip: 1.0
-* epochs: 10
+This repo expects **plain text files** at:
+
+```
+data/raw/train.txt
+data/raw/valid.txt
+data/raw/test.txt
+```
+
+WikiText-2 raw is the default target. You can put any text there as long as the splits exist.
+
+> Important: `data/` should NOT be committed to GitHub.
 
 ---
 
-## Results (fill in after you run)
+## Current results (WikiText-2, word-level)
 
-| Model      | Params | Top-1 | Top-5 | Perplexity |
-| ---------- | ------ | ----- | ----- | ---------- |
-| LSTM-2x512 | TBD    | TBD   | TBD   | TBD        |
+Checkpoint: `checkpoints/best.pt`
+
+| Split | Loss  | PPL   | Top-1 | Top-5 |
+|------:|:-----:|:-----:|:-----:|:-----:|
+| valid | 5.5729 | 263.20 | 20.09% | 38.78% |
+| test  | 5.5241 | 250.66 | 20.24% | 39.37% |
+
+---
+
+## GitHub / what not to push
+
+Make sure your `.gitignore` includes at least:
+
+- `data/`
+- `checkpoints/`
+- `.venv/`
+
+So you only push code, tests, and docs.
 
 ---
 
 ## Notes
 
-This project is intentionally built without copying external code. Only official docs are referenced.
+- This is a **baseline** LSTM LM. Output quality improves a lot with subword tokenization (BPE) and/or stronger models.
+- Next planned upgrade: **Milestone 5 (incremental decoding with hidden state)** for faster, keyboard-like suggestions.
+
