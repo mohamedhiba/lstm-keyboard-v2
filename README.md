@@ -2,7 +2,29 @@
 
 A from-scratch (self-written) **word-level** LSTM language model that predicts the next word given a text prefix.
 
-**Quick links**
+✅ Built end-to-end: data pipeline → vocab/encoding → LSTM LM → training/eval → CLI inference → export → **FastAPI demo**.
+
+---
+
+## Live demo (Cloud Run)
+
+- **Service:** https://lstm-keyboard-demo-743198811832.us-central1.run.app/
+- **Swagger docs:** https://lstm-keyboard-demo-743198811832.us-central1.run.app/docs
+- **Health:** https://lstm-keyboard-demo-743198811832.us-central1.run.app/health
+
+**Model export release (used by the demo):**
+- https://github.com/mohamedhiba/lstm-keyboard-v2/releases/tag/deployment
+
+Quick check:
+```bash
+curl -s https://lstm-keyboard-demo-743198811832.us-central1.run.app/health | python -m json.tool
+```
+
+---
+
+## Quick links
+
+- [Project structure](#project-structure)
 - [Quickstart](#quickstart)
 - [Download WikiText-2](#download-wikitext-2)
 - [Train](#train)
@@ -10,7 +32,7 @@ A from-scratch (self-written) **word-level** LSTM language model that predicts t
 - [CLI inference](#cli-inference)
 - [Export](#export)
 - [API demo (FastAPI)](#api-demo-fastapi)
-- [Keep the demo running](#keep-the-demo-running)
+- [Deploy the demo (Cloud Run)](#deploy-the-demo-cloud-run)
 - [Current results](#current-results-wikitext-2-word-level)
 - [Milestone checklist](#milestone-checklist)
 
@@ -20,7 +42,7 @@ A from-scratch (self-written) **word-level** LSTM language model that predicts t
 
 ## Project structure
 
-```
+```text
 .
 ├── api/
 │   └── main.py          # FastAPI demo (predict + generate)
@@ -58,7 +80,7 @@ pip install -r requirements.txt
 
 This project expects plain text files at:
 
-```
+```text
 data/raw/train.txt
 data/raw/valid.txt
 data/raw/test.txt
@@ -177,38 +199,38 @@ curl -s -X POST http://127.0.0.1:8000/generate \
 
 ---
 
-## Keep the demo running
+## Deploy the demo (Cloud Run)
 
-If you want the demo to be “always on”, you have 3 practical options:
+This repo is set up so the Cloud Run service can **download the exported model at startup** (instead of committing `exports/` to git).
 
-### Option A) Local machine (simple)
+### Prereqs
 
-Run without reload:
+- Google Cloud project with billing enabled
+- APIs enabled: Cloud Run, Cloud Build, Artifact Registry
+
+### Deploy
+
+From the repo root:
+
 ```bash
-uvicorn api.main:app --host 0.0.0.0 --port 8000
+gcloud run deploy lstm-keyboard-demo \
+  --source . \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --port 8080 \
+  --memory 1Gi \
+  --set-env-vars "EXPORT_URL=https://github.com/mohamedhiba/lstm-keyboard-v2/releases/download/deployment/lstm_lm_export.pt,EXPORT_PATH=/tmp/lstm_lm_export.pt"
 ```
 
-Keep it alive using a terminal multiplexer:
+### Verify
+
 ```bash
-tmux new -s lstm_api
-uvicorn api.main:app --host 0.0.0.0 --port 8000
-# detach: Ctrl-b then d
+curl -s https://lstm-keyboard-demo-743198811832.us-central1.run.app/health | python -m json.tool
+
+curl -s -X POST https://lstm-keyboard-demo-743198811832.us-central1.run.app/predict \
+  -H "Content-Type: application/json" \
+  -d '{"text":"I want to","k":10}' | python -m json.tool
 ```
-
-### Option B) System service (best for always-on)
-
-**macOS (launchd)**: create a LaunchAgent that runs uvicorn at login (so it restarts if it crashes).
-
-**Linux (systemd)**: create a service unit that restarts on failure.
-
-(Recommended approach: point the service to your project folder, activate `.venv`, then run `uvicorn api.main:app --host 0.0.0.0 --port 8000`.)
-
-### Option C) Deploy to a server
-
-If you want a public URL:
-- Containerize (Docker) or push code to a PaaS
-- Run `uvicorn api.main:app --host 0.0.0.0 --port 8000`
-- Set an environment variable / volume so `exports/lstm_lm_export.pt` exists on the server
 
 ---
 
