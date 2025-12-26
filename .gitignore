@@ -6,5 +6,6 @@ __pycache__/
 *.pth
 checkpoints/
 artifacts/
+exports/
 .pytest_cache/
 data/
